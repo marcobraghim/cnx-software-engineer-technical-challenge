@@ -1,0 +1,60 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+# Build output
+.next
+out
+dist
+build
+
+# Test files
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+test
+__tests__
+coverage
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+
+# Misc
+.eslintcache
+.prettierignore
+tsconfig.tsbuildinfo
+.next/cache
+
+# Docker
+Dockerfile
+.dockerignore
+

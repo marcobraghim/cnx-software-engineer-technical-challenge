@@ -1,17 +1,17 @@
-# name: Deploy Backend
+# name: Deploy Frontend
 
 # on:
 #   push:
 #     branches: [main]
 #     paths:
-#       - "apps/backend/**"
-#       - ".github/workflows/deploy-backend.yml"
+#       - "apps/frontend/**"
+#       - ".github/workflows/deploy-frontend.yml"
 #   workflow_dispatch:
 
 # env:
-#   SERVICE_NAME: emailsys-backend
+#   SERVICE_NAME: emailsys-frontend
 #   REGION: us-central1
-#   SOURCE_DIR: apps/backend
+#   SOURCE_DIR: apps/frontend
 
 # jobs:
 #   deploy:
@@ -45,10 +45,7 @@
 #           source: ${{ env.SOURCE_DIR }}
 #           allow_unauthenticated: true
 #           args: >
-#             --set-env-vars=GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }},
-#             GCP_STORAGE_BUCKET=${{ secrets.GCP_STORAGE_BUCKET }},
-#             EMAILSYS_CHUNK_SIZE=${{ secrets.EMAILSYS_CHUNK_SIZE || 50000 }},
-#             NODE_ENV=production
+#             --set-env-vars=NODE_ENV=production
 
 #       - name: Publish deployment URL
 #         run: |
