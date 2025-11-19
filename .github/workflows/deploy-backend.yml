@@ -1,0 +1,56 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+env:
+  SERVICE_NAME: emailsys-backend
+  REGION: us-central1
+  SOURCE_DIR: apps/backend
+
+jobs:
+  deploy:
+    name: Build and Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          install_components: beta
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          source: ${{ env.SOURCE_DIR }}
+          allow_unauthenticated: true
+          args: >
+            --set-env-vars=GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }},
+            GCP_STORAGE_BUCKET=${{ secrets.GCP_STORAGE_BUCKET }},
+            EMAILSYS_CHUNK_SIZE=${{ secrets.EMAILSYS_CHUNK_SIZE || 50000 }},
+            NODE_ENV=production
+
+      - name: Publish deployment URL
+        run: |
+          echo "Cloud Run URL: ${{ steps.deploy.outputs.url }}"
+

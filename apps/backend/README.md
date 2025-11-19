@@ -31,6 +31,14 @@
 $ npm install
 ```
 
+### GCP Credentials
+
+Place your credentials file in the `credentials` folder to enable connection with `Cloud Storage`.
+
+### .env file
+
+Don't forget it is needed to create the `.env` file in the root in order to be able to run the project locally. On Cloud Run setup the ENV vars just like `.env.example` file.
+
 ## Compile and run the project
 
 ```bash
