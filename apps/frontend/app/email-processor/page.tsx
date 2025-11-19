@@ -6,6 +6,7 @@ import { UploadCloudIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { EmailsysRepository } from "@/data/repositories/emailsys.repository";
 
 export default function EmailProcessorPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -20,7 +21,7 @@ export default function EmailProcessorPage() {
     [selectedFile]
   );
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!selectedFile) {
@@ -31,11 +32,18 @@ export default function EmailProcessorPage() {
     setIsUploading(true);
     setStatusMessage("Fazendo upload...");
 
-    // Simula o envio do arquivo para a API.
-    setTimeout(() => {
-      setIsUploading(false);
+    try {
+      await EmailsysRepository.uploadCsv(selectedFile);
       setStatusMessage("Arquivo enviado para processamento!");
-    }, 1200);
+    } catch (error: any) {
+      console.error("Erro ao enviar arquivo:", error);
+
+      setStatusMessage(
+        error?.response?.data?.message || "Falha ao enviar arquivo. Tente novamente."
+      );
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -54,6 +62,12 @@ export default function EmailProcessorPage() {
           </p>
         </div>
       </header>
+
+      {statusMessage && (
+        <div className="border-b border-red-200 bg-red-50 px-6 py-4">
+          <p className="text-sm font-medium text-red-800">{statusMessage}</p>
+        </div>
+      )}
 
       <section className="flex flex-1 items-center justify-center px-6 py-10">
         <div className="w-full max-w-2xl rounded-2xl border bg-card p-8 shadow-sm">
@@ -106,12 +120,6 @@ export default function EmailProcessorPage() {
             >
               {isUploading ? "Enviando..." : "Enviar para processamento"}
             </Button>
-
-            {statusMessage && (
-              <p className="rounded-md bg-muted px-4 py-3 text-sm text-muted-foreground">
-                {statusMessage}
-              </p>
-            )}
           </form>
         </div>
       </section>
