@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { CreateEmailsysDto } from './dto/create-emailsy.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EmailsysEntity } from './entities/emailsy.entity';
 import { Repository } from 'typeorm';
@@ -12,11 +11,8 @@ export class EmailsysService {
     private readonly repository: Repository<EmailsysEntity>,
   ) { }
 
-  async create(createEmailsysDto: CreateEmailsysDto) {
-    // Criar registro no banco primeiro
-    const emailsy = this.repository.create({
-      user: { id: createEmailsysDto.userId }
-    });
+  async create(userId: number) {
+    const emailsy = this.repository.create({ user: { id: userId } });
     return await this.repository.save(emailsy);
   }
 

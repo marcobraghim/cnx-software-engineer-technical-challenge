@@ -24,7 +24,6 @@ export class CsvEmailValidatorPipe implements PipeTransform {
       stream
         .pipe(csv())
         .on('headers', (headers: string[]) => {
-          // Verifica se a coluna 'email' existe (case-insensitive)
           const hasEmailColumn = headers.some(header => header.toLowerCase().trim() === 'email');
           
           if (!hasEmailColumn) {
@@ -34,7 +33,7 @@ export class CsvEmailValidatorPipe implements PipeTransform {
           }
         })
         .on('data', (row: any) => {
-          // Encontra a coluna email (case-insensitive)
+          // Encontra a coluna email
           const emailKey = Object.keys(row).find(key => key.toLowerCase().trim() === 'email');
           
           if (emailKey) {
@@ -44,7 +43,7 @@ export class CsvEmailValidatorPipe implements PipeTransform {
               if (!EmailValidator.validate(email)) {
                 invalidEmails.push(email);
               } else {
-                // Adiciona ao Set para remover duplicados e normalizar para lowercase
+                // Remover duplicados
                 emailsSet.add(email.toLowerCase());
               }
             }

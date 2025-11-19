@@ -1,8 +1,8 @@
-import { ArgumentMetadata, BadRequestException, Injectable, PipeTransform } from "@nestjs/common";
+import { BadRequestException, Injectable, PipeTransform } from "@nestjs/common";
 
 @Injectable()
 export class CsvFileValidatorPipe implements PipeTransform {
-  transform(value: Express.Multer.File, metadata: ArgumentMetadata) {
+  transform(value: Express.Multer.File) {
     if (value.mimetype !== 'text/csv') {
       throw new BadRequestException('File must be a CSV file');
     } else if (value.size > 5 * 1024 * 1024) {

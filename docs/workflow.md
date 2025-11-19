@@ -1,211 +1,47 @@
 # Workflow and Decisions
 
-## **Abordagens sugeridas:**
+Specifications at https://github.com/marcobraghim/cnx-software-engineer-technical-challenge
 
-### **1. Cloud Tasks (Recomendada) ⭐**
+## Workflow
 
-**Como funciona:**
-- Backend salva emails no banco com `status: pending`
-- Cria 1 task para cada email no Cloud Tasks
-- Tasks dispara Cloud Function que envia email e atualiza status
-- Configure rate: `0.1 dispatches/second` (1 a cada 10s)
+1. User upload a CSV file through the Frontend.
+2. Backend validate the file, split into files with up to 50.000 emails (approximately 1Mb) and send it to the `Cloud Storage`;
+3. This file content will be a JSON file with the ID of the table `emailsys` on the database and the list of emails;
+4. Each file uploaded to `Cloud Storage` triggers a `Cloud Function`, let's call it `enqueueEmailsFromFile` , that insert each one of the emails in the `Database` avoiding duplicates with `pending` status;
+5. After insertion create one `Cloud Task` for each one;
+6. `Cloud Task` is configurable about the rate limit so it will dispatch one `Cloud Function` by email called `sendNextEmailFromQueue` with no concurrent tasks;
+7. The function `sendNextEmailFromQueue` will get the next `pending` email on the database and put it to `processing`, this UPDATE need to avoid concurrency by using `FOR UPDATE SKIP LOCKED` on the Postgres statement;
+8. So we generate a `Base62` token based on its ID with a SALT with no timestamp to be sure that the token will never ever repeat for any ID, call the API to send this email and then set it as `sent` on database;
+9. In error cases we use the logs from GCP, besides we use try/catch blocks on functions to make it work properly. `sendNextEmailFromQueue` will revert the email status to `pending` for example, so the system can retry it.
 
-**Prós:**
-- ✅ Rate limit nativo e configurável
-- ✅ Retry automático
-- ✅ Não trava backend (assíncrono)
-- ✅ Controle fino por email
+## Pros
 
-**Contras:**
-- ❌ Criar muitas tasks pode demorar (mas não trava)
+The only thing that Backend will do is to validate upload the files to the Cloud Storage and then the user is free to continue navigating on the Frontend. It's a good practice to limit the file up to 5Mb or something like that.
 
----
+Cloud Function can handle by itself the server resources, so it will never be blocked. Another good thing about it are the logs that can be collected as needed and centralized on GCP.
 
-### **2. Pub/Sub + Cloud Scheduler**
+Cloud Task is really easy to configure in terms of rate limit so it won't be a problem at all. Also we can configure the amount of concurrent tasks if needed.
 
-**Como funciona:**
-- Backend salva emails no banco com `status: pending`
-- Cloud Scheduler roda a cada 10s
-- Cloud Function busca 1 email pending e envia
-- Atualiza status para `sent`
+Each task on the queue will be retried in case of fail, this is also configurable on Cloud Tasks.
 
-**Prós:**
-- ✅ Simples de implementar
-- ✅ Rate limit controlado pelo Scheduler
-- ✅ Não trava backend
+Generate the email token from a Base62 logic with the Database ID will guaranty that the token will never repeat and with the fixed shuffle and a SALT we can avoid next ID to be predictable.
 
-**Contras:**
-- ❌ Menos eficiente (query a cada 10s mesmo sem emails)
-- ❌ Precisa gerenciar concorrência manual
+On frontend it’s possible for the user to follow how many emails was already sent, processing and pending.
 
----
+## Cons
 
-### **3. Cron Job no próprio backend (Não recomendado)**
+The low rate of limit on sending API make this architecture overkill in terms of Cloud Tasks, which could be replaced by a Cronjob, but this approach was decided based on a high scalable system potential.
 
-**Como funciona:**
-- Backend tem cron que roda a cada 10s
-- Busca 1 email pending e envia
+The cost of the Cloud architecture is less predictable, the more processing queues the more cost will have.
 
-**Prós:**
-- ✅ Mais simples (tudo no backend)
+## Frontend
 
-**Contras:**
-- ❌ Backend precisa ficar rodando 24/7
-- ❌ Não escala bem
-- ❌ Pode travar se backend cair
+Next.js is fast, SEO-friendly, with built-in SSR/SSG and optimized performance by default.
 
----
+## Backend
 
-## **Comparação:**
+The NestJS framework provides a well-structured architecture and TypeScript, making it a reliable and scalable solution.
 
-| Aspecto | Cloud Tasks | Pub/Sub + Scheduler | Cron no Backend |
-|---------|-------------|---------------------|-----------------|
-| **Rate control** | ⭐⭐⭐ Nativo | ⭐⭐ Manual | ⭐ Manual |
-| **Escalabilidade** | ⭐⭐⭐ Excelente | ⭐⭐ Boa | ⭐ Limitada |
-| **Confiabilidade** | ⭐⭐⭐ Alta | ⭐⭐ Média | ⭐ Depende do backend |
-| **Custo** | ⭐⭐ Médio | ⭐⭐ Médio | ⭐⭐⭐ Menor |
-| **Complexidade** | ⭐⭐ Média | ⭐⭐ Média | ⭐⭐⭐ Simples |
-| **Retry** | ⭐⭐⭐ Automático | ⭐⭐ Manual | ⭐ Manual |
+## Database
 
----
-
-## **Recomendação final:**
-
-**Use Cloud Tasks** porque:
-1. Rate limit nativo (configure e esqueça)
-2. Não trava backend (totalmente assíncrono)
-3. Retry automático se email falhar
-4. Escala automaticamente
-
----
-
-## **Respostas:**
-
-### **1. Backend pode travar ao salvar muitos emails?**
-
-**Sim, pode!** Se CSV tem 100k emails e você faz:
-
-```typescript
-for (const email of emails) {
-  await db.insert(email); // ❌ Trava
-}
-```
-
-**Solução:**
-- ✅ Use **bulk insert** (insere vários de uma vez)
-- ✅ Processe em **background** (retorna resposta rápido)
-- ✅ Use **streaming** para CSVs grandes
-
-```typescript
-// ✅ Bom
-async function uploadCSV(file) {
-  // Retorna rápido
-  response.send({ message: 'Processando...' });
-  
-  // Processa em background
-  processInBackground(async () => {
-    const emails = await parseCSV(file);
-    
-    // Bulk insert (1000 por vez)
-    for (let i = 0; i < emails.length; i += 1000) {
-      await db.batchInsert(emails.slice(i, i + 1000));
-    }
-  });
-}
-```
-
----
-
-### **2. Disparo de email pode travar backend?**
-
-**Sim, se fizer síncrono!**
-
-```typescript
-// ❌ Ruim - trava
-app.post('/upload', async (req, res) => {
-  const emails = await saveToDatabase(req.file);
-  
-  for (const email of emails) {
-    await sendEmail(email); // ❌ Trava aqui
-  }
-  
-  res.send('Done'); // Usuário espera eternamente
-});
-```
-
-**Solução:**
-```typescript
-// ✅ Bom - não trava
-app.post('/upload', async (req, res) => {
-  const emails = await saveToDatabase(req.file);
-  
-  // Criar tasks (não espera completar)
-  createTasksInBackground(emails);
-  
-  res.send('Processando emails...'); // Retorna rápido
-});
-```
-
----
-
-## **Arquitetura recomendada:**
-
-```
-1. Frontend upload CSV
-   ↓
-2. Backend salva no DB + retorna "Processando..."
-   ↓
-3. Backend cria Cloud Tasks (background)
-   ↓
-4. Cloud Tasks dispara Cloud Function
-   ↓
-5. Cloud Function envia email (1 a cada 10s)
-   ↓
-6. Atualiza status no DB
-```
-
-**Código exemplo:**
-
-```typescript
-// Backend - Upload
-@Post('upload-csv')
-async uploadCSV(@UploadedFile() file) {
-  // Salva no DB (bulk insert)
-  const emails = await this.emailService.bulkInsert(file);
-  
-  // Cria tasks em background (não espera)
-  this.taskService.createEmailTasks(emails);
-  
-  return { message: 'Processando emails...', total: emails.length };
-}
-
-// Task Service
-async createEmailTasks(emails) {
-  const limit = pLimit(50); // 50 por vez
-  
-  const tasks = emails.map(email => 
-    limit(() => 
-      this.cloudTasks.create({
-        url: 'https://REGION-PROJECT.cloudfunctions.net/sendEmail',
-        body: { emailId: email.id },
-      })
-    )
-  );
-  
-  // Não espera completar
-  Promise.all(tasks).catch(console.error);
-}
-
-// Cloud Function
-export async function sendEmail(req, res) {
-  const { emailId } = req.body;
-  
-  const email = await db.getEmail(emailId);
-  await emailProvider.send(email);
-  await db.updateStatus(emailId, 'sent');
-  
-  res.send('OK');
-}
-```
-
-**Resumo:** Cloud Tasks + Cloud Function = backend nunca trava! 🚀
+Cloud SQL Postgres will be my choice. It could be MySQL, but I've been working with Postgres lately.
