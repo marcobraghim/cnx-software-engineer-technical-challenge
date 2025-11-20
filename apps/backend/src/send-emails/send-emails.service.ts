@@ -104,6 +104,8 @@ export class SendEmailsService {
 
     let response: Response;
     try {
+      console.log('Email body:', emailData.body);
+
       response = await fetch(this.baseUrl + '/send-email', {
         method: 'POST',
         headers: {

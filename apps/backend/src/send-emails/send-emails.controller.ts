@@ -58,7 +58,6 @@ export class SendEmailsController {
         await this.emailsysItemService.updateStatus(email.id, EmailsysItemStatus.Sent);
 
       } catch (error) {
-        console.error('o error foi aqui no controller', error);
         await this.emailsysItemService.updateStatus(email.id, EmailsysItemStatus.Error);
 
         // log error
