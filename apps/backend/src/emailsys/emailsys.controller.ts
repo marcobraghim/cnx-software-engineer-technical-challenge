@@ -4,7 +4,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CsvFileValidatorPipe } from './validators/csv.file.validator.pipe';
 import { CsvEmailValidatorPipe } from './validators/csv.email.validator.pipe';
 import type { CsvFileWithEmails } from './validators/csv.email.validator.pipe';
-import { GcpStorageService } from 'src/services/gcp.storage.service';
+import { GcpStorageService } from 'src/providers/gcp.storage.service';
 
 @Controller('emailsys')
 export class EmailsysController {

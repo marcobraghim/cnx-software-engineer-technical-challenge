@@ -29,8 +29,11 @@ functions.cloudEvent('enqueueEmailsFromFile', async cloudEvent => {
 
   // Validate the file content
   const jsonContent = JSON.parse(fileContent.toString() ?? '{}');
-  if (!jsonContent.emailsysId || !jsonContent.emails || !Array.isArray(jsonContent.emails) || jsonContent.emails.length === 0) {
+  if (!jsonContent.emailsysId || !jsonContent.emails || !Array.isArray(jsonContent.emails)) {
     throw new Error('File content is not valid');
+  } else if (jsonContent.emails.length === 0) {
+    console.log(`No emails found in file, skipping...`);
+    return;
   }
 
   // Enqueue the emails to the database Cloud SQL Postgres
@@ -46,10 +49,11 @@ functions.cloudEvent('enqueueEmailsFromFile', async cloudEvent => {
     await client.query('BEGIN');
     
     // Insert each email as a record in emailsys_item table
+    // Could split this into chunks make it faster and/or save resources from server
     for (const email of emails) {
       await client.query(
-        'INSERT INTO emailsys_item (fk_emailsys, emailto, subject, body, status) VALUES ($1, $2, $3, $4, $5)',
-        [emailsysId, email, '', '', 'pending']
+        'INSERT INTO emailsys_item (fk_emailsys, emailto, status) VALUES ($1, $2, $3)',
+        [emailsysId, email, 'pending']
       );
     }
     

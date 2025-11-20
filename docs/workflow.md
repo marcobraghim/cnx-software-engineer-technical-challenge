@@ -10,7 +10,7 @@ Specifications at https://github.com/marcobraghim/cnx-software-engineer-technica
 4. Each file uploaded to `Cloud Storage` triggers a `Cloud Function`, let's call it `enqueueEmailsFromFile` , that insert each one of the emails in the `Database` avoiding duplicates with `pending` status;
 5. After insertion create one `Cloud Task` for each one;
 6. `Cloud Task` is configurable about the rate limit so it will dispatch one `Cloud Function` by email called `sendEmailsFromQueue` with no concurrent tasks;
-7. The function `sendEmailsFromQueue` will get the next `pending` email on the database and put it to `processing`, this UPDATE need to avoid concurrency by using `FOR UPDATE SKIP LOCKED` on the Postgres statement;
+7. The function `sendEmailsFromQueue` will get the next `pending` email on the database and put it to `processing`;
 8. So we generate a `Base62` token based on its ID with a SALT with no timestamp to be sure that the token will never ever repeat for any ID, call the API to send this email and then set it as `sent` on database;
 9. In error cases we use the logs from GCP, besides we use try/catch blocks on functions to make it work properly. `sendEmailsFromQueue` will revert the email status to `pending` for example, so the system can retry it.
 
