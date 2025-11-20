@@ -1,4 +1,4 @@
-import { Storage } from "@google-cloud/storage";
+import { Storage, StorageOptions } from "@google-cloud/storage";
 import { join } from "path";
 
 export class GcpStorageService {
@@ -9,10 +9,16 @@ export class GcpStorageService {
   constructor(projectId: string, bucketName: string) {
     this.bucket = bucketName;
 
-    this.storage = new Storage({
+    const storageOptions: StorageOptions = {
       projectId: projectId.toString(),
-      keyFilename: join(__dirname, '../../credentials/gcp-credentials.json'),
-    });
+    };
+
+    // In development, use the credentials file
+    if (process.env.NODE_ENV !== 'production') {
+      storageOptions.keyFilename = join(__dirname, '../../credentials/gcp-credentials.json');
+    }
+
+    this.storage = new Storage(storageOptions);
   }
 
   async uploadFile(fileName: string, fileContent: Buffer | string, contentType: string = 'application/octet-stream') {
