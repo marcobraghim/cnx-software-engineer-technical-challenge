@@ -11,6 +11,10 @@ export function genBase62FromNumber(num: number): string {
 }
 
 export function decodeBase62FromToken(token: string): number | null {
-  const [emailId] = hashids.decode(token);
-  return emailId ? Number(emailId) : null;
+  try {
+    const [emailId] = hashids.decode(token);
+    return emailId ? Number(emailId) : null;
+  } catch (error) {
+    return null;
+  }
 }
