@@ -39,6 +39,12 @@ Place your credentials file in the `credentials` folder to enable connection wit
 
 Don't forget it is needed to create the `.env` file in the root in order to be able to run the project locally. On Cloud Run setup the ENV vars just like `.env.example` file.
 
+## Database (Postgres)
+
+This project is supposed to work with the following structure of database. A text representation of it was made with [dbdiagram.io](https://dbdiagram.io). [See the file](../../docs/database/dbdiagram.md)
+
+![Database ER Diagram](../../docs/database/der.png)
+
 ## Compile and run the project
 
 ```bash
